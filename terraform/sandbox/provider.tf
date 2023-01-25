@@ -8,13 +8,13 @@ terraform {
 }
 
 provider "aws" {
-profile = "starktech-gov"
-region  = "us-gov-east-1"
+profile = "innovative_sandbox"
+region  = "us-east-1"
 
   default_tags {
     tags = {
-      Environment = "Production"
-      Owner       = "StarkTech"
+      Environment = "Test"
+      Owner       = "JMason"
       CreatedBy   = "Terraform"
     }
   }

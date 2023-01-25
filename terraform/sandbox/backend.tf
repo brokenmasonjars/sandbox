@@ -6,12 +6,12 @@ terraform {
   required_version = ">= 1.3.1"
 
   backend "s3" {
-    bucket         = "starktech-us-gov-east-terraform-bucket"
-    key            = "prod/us-gov-east/terraform.tfstate"
-    kms_key_id     = "arn:aws-us-gov:kms:us-gov-east-1:077322660848:key/7b5ac662-3105-4ad7-bb3c-8ef8bcc0dd46"
-    region         = "us-gov-east-1"
+    bucket         = "jmason-idps-sandbox-bucket"
+    key            = "terraform.tfstate"
+    kms_key_id     = "arn:aws:kms:us-east-1:141388277701:key/4b899881-86a4-4f2d-8879-988590d83b19"
+    region         = "us-east-1"
     encrypt        = true
-    dynamodb_table = "starktech-us-gov-east-terraform"
-    profile        = "starktech-gov"
+    dynamodb_table = "jmason-idps-sandbox-dynamodb"
+    profile        = "innovative_sandbox"
   }
 }

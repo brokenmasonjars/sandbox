@@ -51,7 +51,7 @@ Resources:
           - Sid: "Enable IAM User Permission"
             Effect: "Allow"
             Principal:
-              AWS: !Join [ "", [ "arn:aws-us-gov:iam::", !Ref "AWS::AccountId", ":root" ] ]
+              AWS: !Join [ "", [ "arn:aws:iam::", !Ref "AWS::AccountId", ":root" ] ]
             Action:
               - "kms:*"
             Resource:
@@ -86,7 +86,7 @@ Resources:
         Statement:
           - Action: "s3:PutObject"
             Effect: "Deny"
-            Resource: !Join [ "", [ "arn:aws-us-gov:s3:::", !Ref S3BucketTerraform, "/*" ] ]
+            Resource: !Join [ "", [ "arn:aws:s3:::", !Ref S3BucketTerraform, "/*" ] ]
             Principal: "*"
             Condition:
               StringNotEquals:
