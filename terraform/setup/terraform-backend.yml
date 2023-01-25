@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Creates Terraform backend requirement - KMS key, versioned and encrypted S3 bucket, DynamoDB Table"
+
+
+Parameters:
+
+  pKMSkeyAlias:
+    Description: "Used by S3 bucket for KMS encryption."
+    Type: "String"
+
+  pBucketName:
+    Description: "KMS encryption and versioning enabled."
+    Type: "String"
+
+  pDynamoTableName:
+    Description: "Used for state locking.  No encryption."
+    Type: "String"
+
+
+Metadata:
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "Terraform Configuration"
+      Parameters:
+        - "pKMSkeyAlias"
+        - "pBucketName"
+        - "pDynamoTableName"
+    ParameterLabels:
+      pKMSkeyAlias:
+        default: "KMS Key Friendly Name"
+      pBucketName:
+        default: "S3 Bucket Name"
+      pDynamoTableName:
+        default: "DynamoDB Table Name"
+
+
+Resources:
+
+  KMSkeyTerraform:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Description: "Terraform"
+      Enabled: True
+      EnableKeyRotation: True
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: "terraform"
+        Statement:
+          - Sid: "Enable IAM User Permission"
+            Effect: "Allow"
+            Principal:
+              AWS: !Join [ "", [ "arn:aws-us-gov:iam::", !Ref "AWS::AccountId", ":root" ] ]
+            Action:
+              - "kms:*"
+            Resource:
+              - "*"
+      Tags:
+        - Key: "managed-by"
+          Value: "cloudformation"
+
+  KMSkeyAliasTerraform:
+    Type: "AWS::KMS::Alias"
+    Properties:
+      AliasName: !Join [ "", [ "alias/", !Ref pKMSkeyAlias ] ]
+      TargetKeyId: !Ref KMSkeyTerraform
+
+  S3BucketTerraform:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      VersioningConfiguration:
+        Status: "Enabled"
+      BucketName: !Ref pBucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  S3BucketPolicyTerraform:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref S3BucketTerraform
+      PolicyDocument:
+        Statement:
+          - Action: "s3:PutObject"
+            Effect: "Deny"
+            Resource: !Join [ "", [ "arn:aws-us-gov:s3:::", !Ref S3BucketTerraform, "/*" ] ]
+            Principal: "*"
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption-aws-kms-key-id:
+                  - !GetAtt KMSkeyTerraform.Arn
+          - Sid: "DeletionProtection"
+            Action: "s3:DeleteBucket"
+            Effect: "Deny"
+            Resource: !GetAtt S3BucketTerraform.Arn
+            Principal:
+                AWS: "*"
+
+  DynamoTableTerraform:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "LockID"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "LockID"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TableName: !Ref pDynamoTableName
+
+
+Outputs:
+
+  s3bucket:
+    Description: "State bucket. Use as 'bucket' in Terraform s3 backend configuration."
+    Value: !Ref pBucketName
+
+  dynamoTable:
+    Description: "DynamoDB Lock table.  Use as 'dynamodb_table' in Terraform s3 backend configuration."
+    Value: !Ref pDynamoTableName
+
+  kmsKeyArn:
+    Description: "ARN of KMS Key. Use as 'kms_key_id' in Terraform s3 backend configuration."
+    Value: !GetAtt KMSkeyTerraform.Arn
